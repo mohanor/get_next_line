@@ -16,6 +16,8 @@
 #include <fcntl.h>
 #include <string.h>
 
+static char	*ft_strdup(char *s1);
+
 static char	*ft_addtostr(char *str, const char *s)
 {
 	int	i;
@@ -29,15 +31,15 @@ static char	*ft_addtostr(char *str, const char *s)
 	return (str);
 }
 
-static char	*ft_strjoin(char const *s1, char const *s2)
+static char	*ft_strjoin(char *s1, char *s2)
 {
 	size_t	len;
 	size_t	index;
 	size_t	last_index;
 	char	*str;
 
-	if (s1 == NULL || s2 == NULL)
-		return (0);
+	if (s1 == NULL)
+		s1 = ft_strdup("");
 	index = 0;
 	len = strlen(s1) + strlen(s2);
 	str = (char *)malloc((len + 1) * sizeof(char));
@@ -52,10 +54,11 @@ static char	*ft_strjoin(char const *s1, char const *s2)
 		index++;
 	}
 	str[last_index + index] = '\0';
+	free(s1);
 	return (str);
 }
 
-static char	*ft_strchr(const char *s, int c)
+static char	*ft_strchr(char *s, int c)
 {
 	int	index;
 
@@ -71,9 +74,9 @@ static char	*ft_strchr(const char *s, int c)
 	return (0);
 }
 
-static char	*ft_strdup(const char *s1)
+static char	*ft_strdup(char *s1)
 {
-	char	*str;
+	char	*s;
 	int		i;
 
 	i = 0;
@@ -81,26 +84,34 @@ static char	*ft_strdup(const char *s1)
     {
         i++;
     }
-	str = (char *)malloc(i + 1);
-	if (!str)
+	s = (char *)malloc((i + 1) * sizeof(char));
+	if (!s)
 		return (0);
     i = 0;
 	while (s1[i] != '\n' && s1[i] != '\0')
 	{
-		str[i] = s1[i];
+		s[i] = s1[i];
 		i++;
 	}
-    str[i] = '\n';
-	str[i + 1] = '\0';
-	return (str);
+	if (s1[i] == '\n')
+	{
+		s[i] = '\n';
+		s[i + 1] = '\0';
+	}
+	else
+		s[i] = '\0';
+	return (s);
 }
 
 static int has_newline(char *str)
 {
     int i = 0;
+
+	if(str == NULL)
+		return (0);
     while (str[i])
     {
-        if(str[i] == '\n' || str[i] == '\0')
+        if(str[i] == '\n')
             return (1);
         i++;
     }
@@ -109,27 +120,37 @@ static int has_newline(char *str)
 
 char    *get_next_line(int fd)
 {
-    char     c[BUFFER_SIZE + 1];
-    static char     *ptr = NULL;
-    char            *str = "";
+    char			*c;
+    static char     *ptr;
+    char            *str;
     int             sz;
 
-    if (fd < 0 || BUFFER_SIZE < 1) return 0;
-    if (ptr)
-        str = ft_strjoin(str, ptr + 1);
-
-    sz = read(fd, c, BUFFER_SIZE);
-    if (sz <= 0) return 0;
-    str = ft_strjoin(str, c);
-    c[BUFFER_SIZE] = '\0';
-    while (!has_newline(c) && sz)
+    if (fd < 0 || BUFFER_SIZE < 1)
+		return (0);
+	c = (char *)malloc((BUFFER_SIZE + 1) * sizeof(char));
+	if (!c)
+		return 0;
+	str = NULL;
+	if (ptr)
+	{
+		str = ft_strjoin(str, ptr + 1);
+	}
+	sz = 1;
+    while (!has_newline(str) && sz)
     {
         sz = read(fd, c, BUFFER_SIZE);
+		if (sz < 0)
+		{
+			free(c);
+			return (NULL);			
+		}
+		if (sz == 0)
+			break ;
+		c[BUFFER_SIZE] = '\0';
         str = ft_strjoin(str, c);
-		
-        c[BUFFER_SIZE] = '\0';
     }
     ptr = ft_strchr(str, '\n');
+	free(c);
     return ft_strdup(str);
 }
 /*
